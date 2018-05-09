@@ -37,11 +37,10 @@ func main() {
 		req, _ := http.NewRequest(r.Method, reqUrl.String(), nil)
 		req.SetBasicAuth(user, pass)
 
-		fmt.Println(reqUrl.String())
-
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {
-			log.Printf("Failed to %s %s", req.Method, req.URL.String())
+			log.Printf("Failed to %s %s: %s", req.Method, req.URL.String(), err.Error())
+			w.WriteHeader(http.StatusBadGateway)
 			return
 		}
 		defer res.Body.Close()
