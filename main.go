@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	base, err := url.Parse(os.Getenv("PRP_URL"))
+	base, err := url.Parse(os.Getenv("PP_URL"))
 	if err != nil {
 		log.Fatalf("Failed to parse URL, exiting: \"%s\"", base)
 		os.Exit(1)
@@ -20,8 +20,8 @@ func main() {
 		os.Exit(2)
 	}
 
-	user := os.Getenv("PRP_USER")
-	pass := os.Getenv("PRP_PASS")
+	user := os.Getenv("PP_USER")
+	pass := os.Getenv("PP_PASS")
 	if user == "" || pass == "" {
 		log.Fatal("Missing username or password")
 		os.Exit(3)
