@@ -1,41 +1,55 @@
 package main
 
 import (
+	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
-	"net/http/httputil"
 	"net/url"
 	"os"
 )
 
 func main() {
-	url, err := url.Parse(os.Getenv("PRP_URL"))
+	base, err := url.Parse(os.Getenv("PRP_URL"))
 	if err != nil {
-		log.Fatalf("Failed to parse URL, exiting: \"%s\"", url)
+		log.Fatalf("Failed to parse URL, exiting: \"%s\"", base)
 		os.Exit(1)
+	}
+	if base.Host == "" {
+		log.Fatal("URL is blank, exiting")
+		os.Exit(2)
 	}
 
 	user := os.Getenv("PRP_USER")
 	pass := os.Getenv("PRP_PASS")
 	if user == "" || pass == "" {
 		log.Fatal("Missing username or password")
-		os.Exit(2)
+		os.Exit(3)
 	}
 
-	proxy := &httputil.ReverseProxy{Director: buildAuthHandler(user, pass)}
-
-	http.HandleFunc("/", buildProxyHandler(proxy))
-	log.Fatal(http.ListenAndServe(":8080", nil))
-}
-
-func buildAuthHandler(user, pass string) func(*http.Request) {
-	return func(req *http.Request) {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		reqUrl := url.URL{
+			Scheme:   base.Scheme,
+			Host:     base.Host,
+			Path:     r.URL.Path,
+			RawQuery: r.URL.RawQuery,
+		}
+		req, _ := http.NewRequest(r.Method, reqUrl.String(), nil)
 		req.SetBasicAuth(user, pass)
-	}
-}
 
-func buildProxyHandler(p *httputil.ReverseProxy) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		p.ServeHTTP(w, r)
-	}
+		fmt.Println(reqUrl.String())
+
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			log.Printf("Failed to %s %s", req.Method, req.URL.String())
+			return
+		}
+		defer res.Body.Close()
+
+		body, _ := ioutil.ReadAll(res.Body)
+
+		fmt.Fprintln(w, string(body))
+	})
+
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
